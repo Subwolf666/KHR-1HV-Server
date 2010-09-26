@@ -57,11 +57,11 @@ namespace Server
                 Server.Trim.Init();
 
             if (MainIni.EnableRemoteControl)
-                if (!Server.XBox360.Init())
+                if (!Server.XBox360.Open)
                     Server.XBox360.Init();
 
 //            RCServo.Close();
-//            RCServo.Init();
+            RCServo.Init();
             Server.I2C.Init();
             Server.SPI.Init();
             Server.AD7918.Init();
@@ -90,31 +90,34 @@ namespace Server
                         // and apply them to the current servo position with mixwidth as sensorvalue.
 
                         Server.XBox360.ControllerState();
-                        if (Server.XBox360.Buttons == 128)
+                        if (Server.XBox360.Open)
                         {
-                            newStart = false;
-                            break;
-                        }
-                        if (Server.XBox360.Buttons == 64)
-                        {
-                            if (RCServo.Connected)
-                                RCServo.Close();
-                            else
-                                RCServo.Init();
-                            Thread.Sleep(1000);
-                        }
-                        for (int i = 0; i < StaticUtilities.numberOfMotions; i++)
-                        {
-                            // check if the button pressed is linked to a motion in the table and
-                            // that the controller state is not 65535 (no motion).
-                            if ((Convert.ToInt32(Table.MotionTable["Motion" + (i + 1).ToString()]["Control"]) == Server.XBox360.Buttons) && (Server.XBox360.Buttons != 65535))
+                            if (Server.XBox360.Buttons == 128)
                             {
-                                Log.WriteLineMessage(string.Format("Playing motion: {0}, {1}", Table.MotionTable["Motion" + (i + 1).ToString()]["Name"], Table.MotionTable["Motion" + (i + 1).ToString()]["Control"]));
-                                Server.MotionInterpreter.Filename = Server.Table.MotionTable["Motion" + (i + 1).ToString()]["Filename"];
-                                Server.MotionInterpreter.Play();
+                                newStart = false;
                                 break;
                             }
-                        } // END For
+                            if (Server.XBox360.Buttons == 64)
+                            {
+                                if (RCServo.Connected)
+                                    RCServo.Close();
+                                else
+                                    RCServo.Init();
+                                Thread.Sleep(1000);
+                            }
+                            for (int i = 0; i < StaticUtilities.numberOfMotions; i++)
+                            {
+                                // check if the button pressed is linked to a motion in the table and
+                                // that the controller state is not 65535 (no motion).
+                                if ((Convert.ToInt32(Table.MotionTable["Motion" + (i + 1).ToString()]["Control"]) == Server.XBox360.Buttons) && (Server.XBox360.Buttons != 65535))
+                                {
+                                    Log.WriteLineMessage(string.Format("Playing motion: {0}, {1}", Table.MotionTable["Motion" + (i + 1).ToString()]["Name"], Table.MotionTable["Motion" + (i + 1).ToString()]["Control"]));
+                                    Server.MotionInterpreter.Filename = Server.Table.MotionTable["Motion" + (i + 1).ToString()]["Filename"];
+                                    Server.MotionInterpreter.Play();
+                                    break;
+                                }
+                            } // END For
+                        } // END If
                     } // END If
                 } // END While
             } // END While
@@ -134,7 +137,6 @@ namespace Server
         static void mainServer_messageHandler(object sender, NewMessageEventsArgs e)
         {
             networkBusy = true;
-            //Log.WriteLineMessage(e.NewUser + ": " + e.NewMessage);
             Log.WriteLineMessage(e.NewMessage);
             string sendMsg = string.Empty;
             string[] message;
@@ -190,7 +192,7 @@ namespace Server
                             Server.RCServo.Init();
 
                             if (MainIni.EnableRemoteControl)
-                                if (!Server.XBox360.Init())
+                                if (!Server.XBox360.Open)
                                     Server.XBox360.Init();
 
                             sendMsg = "Ok";
@@ -409,6 +411,10 @@ namespace Server
                             Log.WriteLineFail(string.Format("Deleting: {0}", file1));
                         }
                     }
+                    else
+                    {
+                        Log.WriteLineFail("Deleting: No such file");
+                    }
                     // send something back as conformation.
                     sendMsg = "Ok";
                     break;
@@ -463,9 +469,10 @@ namespace Server
                     switch (message[1])
                     {
                         case "Open":
-                            if (Server.XBox360.Connected)
+                            if (Server.XBox360.Open)
                                 Server.XBox360.ControllerState();
-                            sendMsg = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12}",
+                            sendMsg = string.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13}",
+                                Server.XBox360.Open,
                                 Server.XBox360.Buttons,
                                 Server.XBox360.ThumbsticksX1, Server.XBox360.ThumbsticksY1,
                                 Server.XBox360.ThumbsticksX2, Server.XBox360.ThumbsticksY2,
@@ -475,7 +482,8 @@ namespace Server
                             break;
                         case "Read":
                             Server.XBox360.ControllerState();
-                            sendMsg = string.Format("{0},{1},{2},{3},{4},{5},{6}",
+                            sendMsg = string.Format("{0},{1},{2},{3},{4},{5},{6},{7}",
+                                Server.XBox360.Open,
                                 Server.XBox360.Buttons,
                                 Server.XBox360.ThumbsticksX1, Server.XBox360.ThumbsticksY1,
                                 Server.XBox360.ThumbsticksX2, Server.XBox360.ThumbsticksY2,

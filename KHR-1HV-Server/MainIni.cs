@@ -57,8 +57,8 @@ namespace Server
                 section.Add("Roboard", "RB100");
                 section.Add("MotionReplay", "false");
                 section.Add("EnableRemoteControl", "false");
-                section.Add("PowerUpMotion", "0");
-                section.Add("LowPowerMotion", "0");
+                section.Add("PowerUpMotion", "-1");
+                section.Add("LowPowerMotion", "-1");
                 section.Add("LowPowerVoltage", "120");
                 section.Add("Timebase", "100");
                 section.Add("FPS", "1");

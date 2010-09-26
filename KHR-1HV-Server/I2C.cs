@@ -21,8 +21,8 @@ namespace Server
             {
                 if (RoBoIO.i2c_Initialize(RoBoIO.I2CIRQ_DISABLE))
                 {
-                    RoBoIO.i2c0_SetSpeed(RoBoIO.I2CMODE_FAST, i2c_clock);
                     _connected = true;
+                    RoBoIO.i2c0_SetSpeed(RoBoIO.I2CMODE_FAST, i2c_clock);
                     Log.WriteLineSucces("Opening: I2C lib");
                     return true;
                 }
@@ -37,11 +37,20 @@ namespace Server
 
         // Method
         //
-        public static void Close()
+        public static bool Close()
         {
-            RoBoIO.i2c_Close();
-            _connected = false;
-            Log.WriteLineSucces("Closing I2C lib");
+            if (_connected)
+            {
+                RoBoIO.i2c_Close();
+                _connected = false;
+                Log.WriteLineSucces("Closing: I2C lib");
+                return true;
+            }
+            else
+            {
+                Log.WriteLineFail("Closing: I2C lib");
+                return false;
+            }
         }
 
         // Property

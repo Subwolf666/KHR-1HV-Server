@@ -109,12 +109,19 @@ namespace Server
 
         public void StopListening()
         {
-            tlsClient.Stop();
-            ServRunning = false;
+            try
+            {
+                ServRunning = false;
+                tlsClient.Stop();
+            }
+            catch (Exception ex)
+            {
+                Log.WriteLineFail(ex.Message);
+            }
         }
 
         //TODO
-        public static void ontvangbericht(string str)
+        private static void ontvangbericht(string str)
         {
             OnNewMessage(str);
         }
@@ -208,29 +215,21 @@ namespace Server
                 {
                     if (strResponse != null)
                     {
-                        // Otherwise send the message to all the other users
-                        //Network.SendMessage(currUser, strResponse);
-                        //this.OnNewMessage(strResponse);
-                        Network.ontvangbericht(strResponse);
+                        // send the message to the users
+                        Network.OnNewMessage(strResponse);
                     }
                 }
             }
-            catch//(Exception ex)
+            catch(Exception ex)
             {
-                // If anything went wrong with this user, disconnect him
-//                Network.RemoveUser(tcpClient);
+                // If anything went wrong with this user.
+                Log.WriteLineFail(ex.Message);
             }
         }
     }
 //=============================================================================
 
-    //    // Constructor for setting the event message
-    //    public StatusChangedEventArgs(string strEventMsg)
-    //    {
-    //        EventMsg = strEventMsg;
-    //    }
-    //}
-
+    // Constructor for setting the event message
     public class NewMessageEventsArgs : EventArgs
     {
         private string EventMsg;

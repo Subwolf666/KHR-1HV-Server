@@ -26,7 +26,6 @@ namespace Server
                 }
                 _connected = false;
                 Log.WriteLineFail("Opening: SPI lib");
-
                 Log.WriteLineError(string.Format("SPI lib fails to initialize ({0})", RoBoIO_DotNet.RoBoIO.roboio_GetErrMsg()));
                 return false;
             }

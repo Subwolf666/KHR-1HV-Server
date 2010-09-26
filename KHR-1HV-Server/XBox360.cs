@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Timers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
@@ -26,18 +25,22 @@ namespace Server
 
         public static bool Init()
         {
+            Log.Module = Module;
             if (!_connected)
             {
-                Log.Module = Module;
-                _connected = true;
-                Log.WriteLineSucces("Opening: XBox360 lib");
-                return true;
-            }
-            else
-            {
+                controllerState = GamePad.GetState(playerIndex);
+                if (controllerState.IsConnected)
+                {
+                    _connected = true;
+                    Log.WriteLineSucces("Opening: XBox360 lib");
+                    return true;
+                }
+                _connected = false;
                 Log.WriteLineFail("Opening: XBox360 lib");
                 return false;
             }
+            Log.WriteLineMessage("Opening: XBox360 lib...already open");
+            return false;
         }
 
         public static bool Close()
@@ -53,7 +56,6 @@ namespace Server
                 Log.WriteLineFail("Closing: XBox360 lib");
                 return false;
             }
-
         }
 
         // Property
@@ -196,10 +198,9 @@ namespace Server
 
         // Property
         //
-        public static bool Connected
+        public static bool Open
         {
             get { return _connected; }
-            set { _connected = value; }
         }
     }
 }
