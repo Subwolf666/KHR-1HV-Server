@@ -120,12 +120,6 @@ namespace Server
             }
         }
 
-        //TODO
-        private static void ontvangbericht(string str)
-        {
-            OnNewMessage(str);
-        }
-
         // Now, create a public event "NewMessageEventHandler" 
         // whose type is our NewMessageEventHandler.
         //
@@ -146,8 +140,6 @@ namespace Server
 
 //=================================================================
 
-    //
-    // public delegate void NewMessageEventHandler(object sender, NewMessageEventsArgs e);
     // This class handels connections; there will be as many instances of it as there will be connected users
     class Connection
     {

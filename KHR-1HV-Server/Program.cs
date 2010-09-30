@@ -16,9 +16,8 @@ namespace Server
         private static Logging Log = new Logging();
         private static string Module = "Program.cs";
         private static bool infinteLoop = true;
-        private static string applicationFolder;
         private static string robotFolder;
-        private static string motionFolder;
+        private static string motionsFolder;
         private static string audioFolder;
         private static string[] strChannelData = new string[StaticUtilities.numberOfServos];
         private static IniFile khr_1hv_motion;
@@ -33,9 +32,8 @@ namespace Server
         {
             Log.Module = Module;
 
-            applicationFolder = Path.GetDirectoryName(Application.ExecutablePath);
-            robotFolder = applicationFolder; //string.Format("{0}\\KHR-1HV", applicationFolder);
-            motionFolder = string.Format("{0}\\Motions", applicationFolder);
+            robotFolder = Path.GetDirectoryName(Application.ExecutablePath);
+            motionsFolder = string.Format("{0}\\Motions", robotFolder);
             audioFolder = string.Format("{0}\\Audio", robotFolder);
 
             networkBusy = false; // There is no network traffic between server and client.
@@ -46,6 +44,33 @@ namespace Server
             Log.WriteLineMessage("==================================");
 
             Network mainServer = new Network();
+
+            Log.WriteLineMessage("Checking folder structure");
+            // Does the Motions folder exists?
+            if (!Directory.Exists(motionsFolder))
+            {
+                Log.WriteLineFail("Motions folder exist");
+                // If not lets create one.
+                Directory.CreateDirectory(motionsFolder);
+                Log.WriteLineSucces("Motions folder created");
+                // Delete the Table.ini since all the motions are gone,
+                // lets create a new Table.ini
+                File.Delete(string.Format("{0}\\Table.ini",robotFolder));
+                Log.WriteLineSucces("Deleting existing Table.ini");
+            }
+            else
+                Log.WriteLineSucces("Motions folder exist");
+
+            // Does the Audio folder exists?
+            if (!Directory.Exists(audioFolder))
+            {
+                Log.WriteLineFail("Audio folder exist");
+                // If not lets create one
+                Directory.CreateDirectory(audioFolder);
+                Log.WriteLineSucces("Audio folder created");
+            }
+            else
+                Log.WriteLineSucces("Audio folder exist");
 
             if (!Server.MainIni.Open)
                 Server.MainIni.Init();
@@ -81,9 +106,15 @@ namespace Server
 
             while (newStart)
             {
+                //Network.messageHandler += new Network.NewMessageEventHandler(mainServer_messageHandler);
                 infinteLoop = true;
                 while (infinteLoop)
                 {
+                    // networkbusy werkt niet meer door de threading. Dit moet opgelost worden door 
+                    // 1-of de networkbusy ook te laten afhangen van playingdone.
+                    // in iedergeval moet er in de motioninterpreter een property komen die laat zien dat
+                    // de motion playing is of niet.
+                    // 2-of in de xbox360controller een stop en start.
                     if (!networkBusy)
                     {
                         // for real time mixing, read the sensor and do the calculations
@@ -92,11 +123,12 @@ namespace Server
                         Server.XBox360.ControllerState();
                         if (Server.XBox360.Open)
                         {
-                            if (Server.XBox360.Buttons == 128)
-                            {
-                                newStart = false;
-                                break;
-                            }
+                            //if (Server.XBox360.Buttons == 128)
+                            //{
+                            //    Server.MotionInterpreter.playing = false;
+                            //    //newStart = false;
+                            //    break;
+                            //}
                             if (Server.XBox360.Buttons == 64)
                             {
                                 if (RCServo.Connected)
@@ -128,13 +160,12 @@ namespace Server
             RCServo.Close();
             mainServer.StopListening();
             Log.WriteLineMessage("Exit");
-            Console.ReadKey();
             Application.Exit();
         }
 
         //
         //
-        static void mainServer_messageHandler(object sender, NewMessageEventsArgs e)
+        public static void mainServer_messageHandler(object sender, NewMessageEventsArgs e)
         {
             networkBusy = true;
             Log.WriteLineMessage(e.NewMessage);
@@ -267,7 +298,7 @@ namespace Server
                         case "Open":
                             // create random filename.
                             fileName = Path.ChangeExtension(Path.GetRandomFileName(), "RMF");
-                            fileName = string.Format("{0}\\{1}", motionFolder, fileName);
+                            fileName = string.Format("{0}\\{1}", motionsFolder, fileName);
                             // get the index for the datatable where the
                             // motion is going to be writen.
                             selectedMotionIndex = Convert.ToInt32(message[2]) + 1;
@@ -356,24 +387,18 @@ namespace Server
                     }
                     break;
                 case "PlayMotionFile":
-                    // hier de message event handler uitzetten 
-                    // en in de motioninterpreter aanzetten als de motion afgespeeld gaat worden.
-                    // zodra de motion weer klaar is, dan hier weer de event handler weer aanzetten.
-                    // reden: dan kan de functie stop en pauze in de motion interpreter afgehandeld worden.
-                    // 
                     int strMotion = (int.Parse(message[1]));
                     Log.WriteLineMessage(string.Format("Playing motion: {0}, {1}", Table.MotionTable["Motion" + (strMotion + 1).ToString()]["Name"], Table.MotionTable["Motion" + (strMotion + 1).ToString()]["Control"]));
                     Server.MotionInterpreter.Filename = Server.Table.MotionTable["Motion" + (strMotion + 1).ToString()]["Filename"];
                     Server.MotionInterpreter.Play();
-
                     //sendMsg = "Ok"; // No need for this.
                     break;
-                //case "StopMotionFile":
-                //    Server.MotionInterpreter.Stop();
-                //    break;
-                //case "PauseMotionFile":
-                //    Server.MotionInterpreter.Pause();
-                //    break;
+                case "StopMotionFile":
+                    Server.MotionInterpreter.Stop();
+                    break;
+                case "PauseMotionFile":
+                    Server.MotionInterpreter.Pause();
+                    break;
                 case "DataTable":
                     switch (message[1])
                     {
@@ -539,25 +564,11 @@ namespace Server
 
         static void Listen(Network mainServer)
         {
-            // Hook the StatusChanged event handler to mainServer_StatusChanged
-//            Network.StatusChanged += new StatusChangedEventHandler(mainServer_StatusChanged);
             // Start listening for connections
             mainServer.StartListening();
             // Show that we started to listen for connections
             Log.WriteLineMessage("Monitoring for connections...");
             Network.messageHandler += new Network.NewMessageEventHandler(mainServer_messageHandler);
         }
-
-        //static void mainServer_StatusChanged(object sender, StatusChangedEventArgs e)
-        //{
-        //    try
-        //    {
-        //        Log.WriteLineMessage(e.EventMessage);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Log.WriteLineError(Convert.ToString(ex));
-        //    }
-        //}
     }
 }

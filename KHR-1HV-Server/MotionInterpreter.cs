@@ -15,7 +15,7 @@ namespace Server
         private static int Items;
         private static int Links;
         private static int Start;
-        public static bool playing = true;
+        public static bool playing = false;
         public static bool pausing = false;
 
         // Method
@@ -75,7 +75,9 @@ namespace Server
             Links = Convert.ToInt32(KHR_1HV_Motion[StaticUtilities.SectionGraphicalEdit][StaticUtilities.GraphicalEditLinks]);
             Start = Convert.ToInt32(KHR_1HV_Motion[StaticUtilities.SectionGraphicalEdit][StaticUtilities.GraphicalEditStart]);
 
-            Interpreter();
+            playing = true;
+            Thread worker = new Thread(Interpreter);
+            worker.Start();
 
             return true;
         }
@@ -84,12 +86,13 @@ namespace Server
         {
             RoBoIO_DotNet.RoBoIO.rcservo_StopAction();
             playing = false;
+            pausing = false;
             return true;
         }
 
         public static bool Pause()
         {
-            if (pausing)
+            if (!pausing)
             {
                 RoBoIO_DotNet.RoBoIO.rcservo_PauseAction();
                 pausing = true;
@@ -104,7 +107,7 @@ namespace Server
 
         // Method
         //
-        private static void Interpreter()
+        public static void Interpreter()
         {
             string linknumber = string.Empty;
             string Item = string.Empty;
@@ -120,11 +123,10 @@ namespace Server
             int iComparisonRegister = 0;
             int cmpMain = 0;
 
-            playing = true;
-
+            // playing = true;
             int originnumber = Start;
 
-            while (playing)  
+            while (playing)
             {
                 if (!pausing)
                 {
@@ -344,7 +346,9 @@ namespace Server
                         playing = false;
                 } // END while (!pausing)
             } // END while (playing)
+            pausing = false;
             Log.WriteLineMessage("Playing done");
+            Network.SendMessage("DonePlaying");
         }
 
         // Method
